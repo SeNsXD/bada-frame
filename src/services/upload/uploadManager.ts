@@ -231,6 +231,9 @@ class UploadManager {
                 let fileTypeInfo = null;
                 let metadata = null;
                 try {
+                    logUploadInfo(
+                        `metadata extraction started ${getFileNameSize(file)} `
+                    );
                     const result = await this.extractFileTypeAndMetadata(
                         file,
                         collectionID
@@ -341,17 +344,17 @@ class UploadManager {
                     this.existingFiles,
                     fileWithCollection
                 );
-            UIService.moveFileToResultList(
-                fileWithCollection.localID,
-                fileUploadResult
-            );
-            UploadService.reducePendingUploadCount();
-            await this.postUploadTask(
+            const finalUploadResult = await this.postUploadTask(
                 fileUploadResult,
                 uploadedFile,
                 skipDecryption,
                 fileWithCollection
             );
+            UIService.moveFileToResultList(
+                fileWithCollection.localID,
+                finalUploadResult
+            );
+            UploadService.reducePendingUploadCount();
         }
     }
 
@@ -406,13 +409,14 @@ class UploadManager {
                 );
                 ImportService.updatePendingUploads(this.remainingFiles);
             }
+            return fileUploadResult;
         } catch (e) {
             logError(e, 'failed to do post file upload action');
             logUploadInfo(
                 `failed to do post file upload action -> ${e.message}
                 ${(e as Error).stack}`
             );
-            throw e;
+            return FileUploadResults.FAILED;
         }
     }
 
